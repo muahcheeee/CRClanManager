@@ -26,12 +26,19 @@ print("Top 3 Donators")
 for i in range(3):
     print("No.",str(i+1), ": ", clanData[numMembers-(i+ 1)][0] , "(", clanData[numMembers-(i +1)][1], ")")
 
+postingForm = ""
+    
 print("")
 print("Members with less than 100 Donations")
 for i in range(numMembers):
-    if (int(clanData[i][1] < 100)):
+    if (int(clanData[i][1]) < 100):
         print(clanData[i][0], "(", clanData[i][1], ")")
-
+        postingForm += clanData[i][0] 
+        postingForm += "(" 
+        postingForm += str(clanData[i][1])
+        postingForm += "), "
+print("")
+print(postingForm)
 clanData.sort(key=lambda x: x[2])
 
 print("")
