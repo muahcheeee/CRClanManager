@@ -2,52 +2,96 @@
 """
 Created on Thu Sep 28 21:17:49 2017
 
-@author: CheeYeo
+@author: muahcheeee
 """
 import json
 import urllib.request
 import requests
+import pprint
 
-sevenMinutesClanUrl = "http://api.cr-api.com/clan/U0GGUR"
-clanJsonData = requests.get(sevenMinutesClanUrl)
-rawData = json.loads(clanJsonData.text)
+oritteClanWarLogUrl = "https://api.royaleapi.com/clan/P9RGUC0Y/warlog"
+oritteClanMembersUrl = "https://api.royaleapi.com/clan/P9RGUC0Y"
 
-numMembers = len(rawData['members'])
+headers = {
+    'auth': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTgyLCJpZGVuIjoiMzU5MzQ2MTg1OTU1MTgwNTcwIiwibWQiOnt9fQ.bc98AXpS-wWGjbatAvgRoPJzCL--1XoE0l6qD82tQlU"
+    }
 
-clanData = []
-for i in range(numMembers):
-    clanData.append([rawData['members'][i]['name'],rawData['members'][i]['donations'],rawData['members'][i]['clanChestCrowns']])
+response = requests.request("GET", oritteClanWarLogUrl, headers=headers)
+warLogHistory = response.json()
 
-#Sort according to donations
-clanData.sort(key=lambda x: x[1])
-print("Weekly Clan Report")
-print("")
-print("Top 3 Donators")
-for i in range(3):
-    print("No.",str(i+1), ": ", clanData[numMembers-(i+ 1)][0] , "(", clanData[numMembers-(i +1)][1], ")")
+response = requests.request("GET", oritteClanMembersUrl, headers=headers)
+rawData = response.json()
 
-postingForm = ""
+def getFailToCompleteWarList(numRecentWars):    
+    failToCompleteWar = []
+    warLogHistoryLength = numRecentWars #Seems like max is 10, len(warLogHistory)
+    for i in range(warLogHistoryLength):
+        failToCompleteWar.append([])
+        for j in range(len(warLogHistory[i]['participants'])):
+            member = warLogHistory[i]['participants'][j]
+            if (member['battlesPlayed'] == 0):
+                failToCompleteWar[i].append(member['name'])
+    return failToCompleteWar;
+
+def printFailToCompleteWarList(failToCompleteWar):
+    failToCompleteWarResultsText = "Recent " + str(len(failToCompleteWar)) + " Wars Inactivity List:"
+    for i in range(len(failToCompleteWar)):
+        failToCompleteWarResultsText += "\n"
+        failToCompleteWarResultsText += str(i + 1) + ": " 
+        for j in range(len(failToCompleteWar[i])):
+            failToCompleteWarResultsText += failToCompleteWar[i][j]
+            if (j < len(failToCompleteWar[i]) - 1):
+                failToCompleteWarResultsText += ", "
+        
+    print(failToCompleteWarResultsText)
+    return;
+
+
+def getDonationsLessThan(min):
+    clanData = []
+    for i in range(rawData['memberCount']):
+        clanData.append([rawData['members'][i]['name'], rawData['members'][i]['donations'], rawData['members'][i]['donationsReceived']])
+    DonationsLessThanMin = []
+    for i in range(len(clanData)):
+        if (clanData[i][1] < min):
+            DonationsLessThanMin.append(clanData[i])
+    return DonationsLessThanMin;
+
+def printFailToMeetDonationRequirementList(DonationsLessThanMin):
+    failToMeetDonationsRequirementText = "People Who Failed To Hit Donation Requirement: "
+    for i in range(len(DonationsLessThanMin)):
+        failToMeetDonationsRequirementText += "\n" + str(i + 1) + ": " + str(DonationsLessThanMin[i][0]) + " (D = " + str(DonationsLessThanMin[i][1]) + " | R = " + str(DonationsLessThanMin[i][2]) + ")"
+    print(failToMeetDonationsRequirementText)
+    return;
+
+def getFailToParticipateInWarList(numRecentWars):
+    warParticipants = []
+    clanMembers = []
+    failToJoinWar = []
+
+    for i in range(rawData['memberCount']):
+        clanMembers.append(rawData['members'][i]['name'])
     
-print("")
-print("Members with less than 100 Donations")
-for i in range(numMembers):
-    if (int(clanData[i][1]) < 100):
-        print(clanData[i][0], "(", clanData[i][1], ")")
-        postingForm += clanData[i][0] 
-        postingForm += "(" 
-        postingForm += str(clanData[i][1])
-        postingForm += "), "
-print("")
-print(postingForm)
-clanData.sort(key=lambda x: x[2])
+    for i in range(numRecentWars):
+        warParticipants.append([])
+        for j in range(len(warLogHistory[i]['participants'])):
+            warParticipants[i].append(warLogHistory[i]['participants'][j]['name'])
 
-print("")
-print("Top 3 Clan Chest Contributers")
-for i in range(3):
-    print("No.",str(i+1), ": ", clanData[numMembers-(i+ 1)][0] , "(", clanData[numMembers-(i +1)][2], ")")
+    for i in range(numRecentWars):
+        failToJoinWar.append(list(set(clanMembers) - set(warParticipants[i])))
+    return failToJoinWar;
 
-print("")
-print("Members with less than 10 Clan Chest Crowns")
-for i in range(numMembers):
-    if (int(clanData[i][2] < 10)):
-        print(clanData[i][0], "(", clanData[i][2], ")")
+def printFailToParticipateInWarList(failToJoinWarList):
+    failToParticipateInWarText = "List of People Who Did Not Participate in Some of the Past " + str(len(failToJoinWarList)) + " Wars:"
+    for i in range (len(failToJoinWarList)):
+        failToParticipateInWarText += "\n" + str(i + 1) + ": "
+        for j in range (len(failToJoinWarList[i])):
+            failToParticipateInWarText += failToJoinWarList[i][j]
+            if (j < len(failToJoinWarList[i]) - 1):
+                failToParticipateInWarText += ", "
+    print(failToParticipateInWarText)
+    return;
+
+printFailToParticipateInWarList(getFailToParticipateInWarList(5))
+printFailToCompleteWarList(getFailToCompleteWarList(5))
+printFailToMeetDonationRequirementList(getDonationsLessThan(100))
