@@ -45,7 +45,16 @@ def getClanPlayersWarStats():
                     clanPlayersWarStats[k][1] += 1
                     clanPlayersWarStats[k][2] += warLogHistory[i]['participants'][j]['battlesPlayed']
                     clanPlayersWarStats[k][3] += warLogHistory[i]['participants'][j]['wins']
-    print(clanPlayersWarStats)
+    playerWarStatsText = "Stats from most the 10 most recent wars \n"
+    for i in range (len(clanPlayersWarStats)):
+        playerWarStatsText += str(i + 1) + ". "
+        playerWarStatsText += str(clanPlayersWarStats[i][0]) 
+        playerWarStatsText += " | Participation Ratio = "
+        playerWarStatsText += str("{:.2f}".format(clanPlayersWarStats[i][1]/10))
+        playerWarStatsText += " | Win Ratio = "
+        playerWarStatsText += str("{:.2f}".format(clanPlayersWarStats[i][3]/clanPlayersWarStats[i][2]))
+        playerWarStatsText += "\n"
+    print(playerWarStatsText)
     return;
 
 def getPlayerWarLossList(numRecentWars):
