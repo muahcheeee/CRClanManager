@@ -11,29 +11,31 @@ import pprint
 
 oritteClanWarLogUrl = "https://api.royaleapi.com/clan/P9RGUC0Y/warlog"
 oritteClanMembersUrl = "https://api.royaleapi.com/clan/P9RGUC0Y"
+orriteClanWarUrl = "https://api.royaleapi.com/clan/P9RGUC0Y/war"
 
 headers = {
-    'auth': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTgyLCJpZGVuIjoiMzU5MzQ2MTg1OTU1MTgwNTcwIiwibWQiOnt9fQ.bc98AXpS-wWGjbatAvgRoPJzCL--1XoE0l6qD82tQlU"
+    'auth': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTgyLCJpZGVuIjoiMzU5MzQ2MTg1OTU1MTgwNTcwIiwibWQiOnt9LCJ0cyI6MTUyOTU4MDM3MDY3NX0.9TXaCR36OpQ8Vr-eLawATyH-mpkhOTNaIwb5t3jw0no"
     }
+
+response = requests.request("GET", orriteClanWarUrl, headers=headers)
+warHistory = response.json()
+#print(warHistory)
 
 response = requests.request("GET", oritteClanWarLogUrl, headers=headers)
 warLogHistory = response.json()
 
-
-# file = open("ClanWarLogExample.txt", 'w')
-# file.write(str(warLogHistory))
-# file.close()
-
-
 response = requests.request("GET", oritteClanMembersUrl, headers=headers)
 rawData = response.json()
 
-# Format: Array of PlayerNames with list [PastParticipation, BattlesPlayed, BattlesWon]
+# Format: Array of PlayerNames with list 
+# [PastParticipation, BattlesPlayed, BattlesWon, Participation Ratio, Win Ratio]
 def getClanPlayersWarStats():
     numRecentWars = 10
     clanPlayersWarStats = []
     for i in range(len(rawData['members'])):
         clanPlayersWarStats.append([rawData['members'][i]['name']])
+        clanPlayersWarStats[i].append(0)
+        clanPlayersWarStats[i].append(0)
         clanPlayersWarStats[i].append(0)
         clanPlayersWarStats[i].append(0)
         clanPlayersWarStats[i].append(0)
@@ -45,45 +47,36 @@ def getClanPlayersWarStats():
                     clanPlayersWarStats[k][1] += 1
                     clanPlayersWarStats[k][2] += warLogHistory[i]['participants'][j]['battlesPlayed']
                     clanPlayersWarStats[k][3] += warLogHistory[i]['participants'][j]['wins']
-    playerWarStatsText = "Stats from most the 10 most recent wars \n"
-    for i in range (len(clanPlayersWarStats)):
-        playerWarStatsText += str(i + 1) + ". "
-        playerWarStatsText += str(clanPlayersWarStats[i][0]) 
-        playerWarStatsText += " | Participation Ratio = "
-        playerWarStatsText += str("{:.2f}".format(clanPlayersWarStats[i][1]/10))
-        playerWarStatsText += " | Win Ratio = "
-        playerWarStatsText += str("{:.2f}".format(clanPlayersWarStats[i][3]/clanPlayersWarStats[i][2]))
-        playerWarStatsText += "\n"
-    print(playerWarStatsText)
-    return;
-
-def getPlayerWarLossList(numRecentWars):
-    playerWarLossList = []
-    for i in range(numRecentWars):
-        playerWarLossList.append([])
-        for j in range(len(warLogHistory[i]['participants'])):
-            member = warLogHistory[i]['participants'][j]
-            if (member['battlesPlayed'] > 0 and member['wins'] < member['battlesPlayed']):
-                warWinRatio = member['wins']/member['battlesPlayed'] 
-                memberWarWinRatioPair = [member['name'] , warWinRatio]
-                playerWarLossList[i].append(memberWarWinRatioPair)
-    return playerWarLossList;
-
-def printPlayerWarLossList(playerWarLossList):
-    playerWarLossResultsText = "Players who loss in the recent" + str(len(playerWarLossList)) + "Wars:"
-    for i in range(len(playerWarLossList)):
-        playerWarLossResultsText += '\n'
-        playerWarLossResultsText += str(i+1) + ":"
-        for j in range(len(playerWarLossList[i])):
-            if (playerWarLossList[i][j][1] != 0):
-                playerWarLossResultsText += playerWarLossList[i][j][0]
-                playerWarLossResultsText += "(" + str(playerWarLossList[i][j][1]) + "), "
-            else:
-                playerWarLossResultsText += playerWarLossList[i][j][0] + ", "
     
-    print(playerWarLossResultsText[:-2])
-    return;
+    for i in range(len(clanPlayersWarStats)):
+        clanPlayersWarStats[i][4] = clanPlayersWarStats[i][1]/numRecentWars
+        
+        if (clanPlayersWarStats[i][2] == 0):
+            clanPlayersWarStats[i][5] = 0
+        else:
+            clanPlayersWarStats[i][5] = clanPlayersWarStats[i][3]/clanPlayersWarStats[i][2]
 
+    return clanPlayersWarStats;
+    
+def printClanPlayersWarStats(clanPlayersWarStats):
+    playerWarStatsText = "Stats from most the 10 most recent wars \n"
+    
+    clanPlayersWarStats.sort(key=lambda x:float(x[4]), reverse=True)
+    
+    for i in range (len(clanPlayersWarStats)):
+        playerWarStatsText += str(i + 1).rjust(3) + ". "
+        playerWarStatsText += str(clanPlayersWarStats[i][0]).ljust(getLengthOfLongestClanMemberName())
+        if (clanPlayersWarStats[i][1] == 0):
+            playerWarStatsText += " | Participation Ratio = 0   "
+        else:
+            playerWarStatsText += " | Participation Ratio = "
+            playerWarStatsText += str("{:.2f}".format(clanPlayersWarStats[i][4]))
+
+        playerWarStatsText += " | Win Ratio = "
+        playerWarStatsText += str("{:.2f}".format(clanPlayersWarStats[i][5]))
+        playerWarStatsText += "\n"
+        
+    print(playerWarStatsText)
 
 def getFailToCompleteWarList(numRecentWars):    
     failToCompleteWar = []
@@ -107,7 +100,6 @@ def printFailToCompleteWarList(failToCompleteWar):
         
     print(failToCompleteWarResultsText)
     return;
-
 
 def getDonationsLessThan(min):
     clanData = []
@@ -154,8 +146,21 @@ def printFailToParticipateInWarList(failToJoinWarList):
     print(failToParticipateInWarText)
     return;
 
+def getFailToFinishCollectionDayList():
+    print(warLogHistory)
+
+def printFailToFinishCollectionDayList():
+    getFailToFinishCollectionDayList()
+
+def getLengthOfLongestClanMemberName():
+    lengthOfLongestName = 0
+    for i in range(len(rawData['members'])):
+        lengthOfLongestName = max(lengthOfLongestName, len(rawData['members'][i]['name']))
+    return lengthOfLongestName        
+
+# printFailToFinishCollectionDayList()
 # printFailToParticipateInWarList(getFailToParticipateInWarList(5))
-# printFailToCompleteWarList(getFailToCompleteWarList(5))
-# printFailToMeetDonationRequirementList(getDonationsLessThan(100))
-# printPlayerWarLossList(getPlayerWarLossList(10))
-getClanPlayersWarStats()
+#printFailToCompleteWarList(getFailToCompleteWarList(10))
+printFailToMeetDonationRequirementList(getDonationsLessThan(100))
+#printClanPlayersWarStats(getClanPlayersWarStats())
+    
