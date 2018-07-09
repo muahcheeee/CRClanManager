@@ -8,10 +8,14 @@ import json
 import urllib.request
 import requests
 import pprint
+import pandas as pd
 
 oritteClanWarLogUrl = "https://api.royaleapi.com/clan/P9RGUC0Y/warlog"
 oritteClanMembersUrl = "https://api.royaleapi.com/clan/P9RGUC0Y"
 orriteClanWarUrl = "https://api.royaleapi.com/clan/P9RGUC0Y/war"
+
+clanDonationHistory = pd.read_excel('OritteClanMembersDonation.xlsx', sheet_name='Sheet1')
+
 
 headers = {
     'auth': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTgyLCJpZGVuIjoiMzU5MzQ2MTg1OTU1MTgwNTcwIiwibWQiOnt9LCJ0cyI6MTUyOTU4MDM3MDY3NX0.9TXaCR36OpQ8Vr-eLawATyH-mpkhOTNaIwb5t3jw0no"
@@ -26,6 +30,23 @@ warLogHistory = response.json()
 
 response = requests.request("GET", oritteClanMembersUrl, headers=headers)
 rawData = response.json()
+
+
+def updateClanMembers():
+    latestClanTagList = []
+    for i in range(len(rawData['members'])):
+        latestClanTagList.append([rawData['members'][i]['tag'], rawData['members'][i]['name']])
+    print(latestClanTagList)
+    for i in range(len(rawData['members'])):
+        if latestClanTagList[i][0] not in clanDonationHistory['tag']:
+            memberData = {'tag': [latestClanTagList[i][0]], 'name':[latestClanTagList[i][1]]}
+            newMember = pd.DataFrame(data=memberData)
+            clanDonationHistory.append(newMember, ignore_index=True)
+                
+def getPlayerInformation(tag):
+    response = requests.request("GET", "https://api.royaleapi.com/player/" + tag, headers=headers)
+    playerInfo = response.json()
+    return playerInfo
 
 # Format: Array of PlayerNames with list 
 # [PastParticipation, BattlesPlayed, BattlesWon, Participation Ratio, Win Ratio]
@@ -158,9 +179,9 @@ def getLengthOfLongestClanMemberName():
         lengthOfLongestName = max(lengthOfLongestName, len(rawData['members'][i]['name']))
     return lengthOfLongestName        
 
-# printFailToFinishCollectionDayList()
-# printFailToParticipateInWarList(getFailToParticipateInWarList(5))
+#printFailToFinishCollectionDayList()
+#printFailToParticipateInWarList(getFailToParticipateInWarList(5))
 #printFailToCompleteWarList(getFailToCompleteWarList(10))
-printFailToMeetDonationRequirementList(getDonationsLessThan(100))
+#printFailToMeetDonationRequirementList(getDonationsLessThan(100))
 #printClanPlayersWarStats(getClanPlayersWarStats())
     
